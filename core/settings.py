@@ -136,8 +136,20 @@ CELERY_TASK_TIME_LIMIT = 30 * 60
 # Celery Beat Schedule
 ##Agenda uma execução periódica (a cada 15 min)
 CELERY_BEAT_SCHEDULE = {
-    "gerar-relatorio-matriculas-cada-1-min": {
+    "gerar-relatorio-matriculas-cada-15-min": {
         "task": "alunos.tasks.gerar_relatorio_matriculas",
         "schedule": crontab(minute="*/15"),  # executa a cada 15 minuto
+    },
+}
+
+# Quantos dias manter relatórios
+REPORTS_RETENTION_DAYS = int(os.getenv("REPORTS_RETENTION_DAYS", "1"))
+
+# Celery Beat Schedule (executa limpeza todo dia às 15:00)
+CELERY_BEAT_SCHEDULE = {
+    **(CELERY_BEAT_SCHEDULE if "CELERY_BEAT_SCHEDULE" in globals() else{}),
+    "limpar-relatorios-antigos-diariamente": { # nome da tarefa, mensagem descritiva
+        "task": "alunos.tasks.limpar_relatorios_antigos",
+        "schedule": crontab(minute=00, hour=15),  # executa todo dia às 15:00
     },
 }
