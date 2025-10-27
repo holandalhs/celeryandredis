@@ -1,8 +1,12 @@
-from celery import shared_task # indica que é uma tarefa compartilhada entre apps do projeto
-from django.utils import timezone # para lidar com datas e horas
-from django.conf import settings # para acessar configurações do projeto
-from pathlib import Path # para manipular caminhos de arquivos
-import csv # para ler arquivos CSV
+from celery import shared_task              # indica que é uma tarefa compartilhada entre apps do projeto
+#O VSC não vai aplicar checagem de tipo dentro do celery, e ele tenta analisar estaticamente os tipos
+#das funções e classes da lib celery (por exemplo, shared_task, Celery, etc.)
+from django.utils import timezone           # para lidar com datas e horas (aware)
+from django.conf import settings            # para acessar configurações do projeto
+from datetime import timedelta, datetime    # timedelta = intervalo de tempo; datetime = data/hora padrão
+from pathlib import Path                    # para manipular caminhos de arquivos
+import csv                                  # para ler e escrever arquivos CSV
+from typing import Optional               # para tipos opcionais 
 
 from .models import Matricula # importa o modelo Matricula
 
@@ -43,3 +47,48 @@ def gerar_relatorio_matriculas():
              ])
 
     return str(filename) # retorna o caminho do arquivo gerado
+
+
+@shared_task                    #pode ser int ou None
+def limpar_relatorios_antigos(days: Optional[int] = None) -> dict:
+    """
+    Remove CSVs em MEDIA_ROOT/reports mais antigos que N dias.
+    Se 'days' for None, usa settings.REPORTS_RETENTION_DAYS (padrão 7).
+    """
+    # garanta que é int
+    keep_days: int = int(days) if days is not None else int(getattr(settings, "REPORTS_RETENTION_DAYS", 7))
+
+    base = Path(settings.MEDIA_ROOT) / "reports"
+    base.mkdir(parents=True, exist_ok=True)
+
+    limite = timezone.now() - timedelta(days=keep_days)
+
+    removidos: list[str] = []
+    mantidos: list[str] = []
+
+    tz = timezone.get_current_timezone()
+
+    for p in base.glob("*.csv"):
+        try:
+            # mtime (timestamp float) -> datetime naive -> datetime aware no timezone atual
+            mtime_naive = datetime.fromtimestamp(p.stat().st_mtime)
+            mtime = timezone.make_aware(mtime_naive, tz)
+        except Exception:
+            mantidos.append(p.name)
+            continue
+
+        if mtime < limite:
+            try:
+                p.unlink()
+                removidos.append(p.name)
+            except Exception:
+                mantidos.append(p.name)
+        else:
+            mantidos.append(p.name)
+
+    return {
+        "retention_days": keep_days,
+        "removed_count": len(removidos),
+        "kept_count": len(mantidos),
+        "removed": removidos,
+    }
