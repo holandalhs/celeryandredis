@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <title>Listagem de Matrículas</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{font-family:system-ui, Arial, sans-serif; margin:24px;}
+    header, form, table{max-width:1100px; margin:auto;}
+    table{width:100%; border-collapse:collapse; margin-top:16px;}
+    th,td{border:1px solid #ddd; padding:8px; font-size:14px;}
+    th{background:#f7f7f7; text-align:left;}
+    .filters{display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;}
+    .pagination a, .pagination span{padding:6px 10px; border:1px solid #ccc; margin:0 2px; text-decoration:none; color:#333;}
+    .pagination span.current{background:#333; color:#fff;}
+    input,select{padding:6px;}
+    button{padding:6px 12px; cursor:pointer;}
+  </style>
+</head>
+<body>
+<header>
+  <h1>Matrículas</h1>
+  <p>Busca, filtros e paginação.</p>
+</header>
+
+<form method="get" action=".">
+  <div class="filters">
+    <input type="text" name="q" placeholder="Nome, CPF, Turma, Curso..." value="{{ q }}">
+    <select name="status">
+      <option value="">Status (todos)</option>
+      {% for s, s_label in page_obj.paginator.object_list.model.Status.choices %}
+        <option value="{{ s }}" {% if s == status_sel %}selected{% endif %}>{{ s_label }}</option>
+      {% endfor %}
+    </select>
+    <select name="curso">
+      <option value="">Curso (todos)</option>
+      {% for c in cursos %}
+        <option value="{{ c }}" {% if c == curso_sel %}selected{% endif %}>{{ c }}</option>
+      {% endfor %}
+    </select>
+    <select name="ano">
+      <option value="">Ano (todos)</option>
+      {% for a in anos %}
+        <option value="{{ a }}" {% if a|stringformat:"s" == ano_sel %}selected{% endif %}>{{ a }}</option>
+      {% endfor %}
+    </select>
+    <select name="semestre">
+      <option value="">Semestre (todos)</option>
+      {% for s in semestres %}
+        <option value="{{ s }}" {% if s|stringformat:"s" == semestre_sel %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button type="submit">Filtrar</button>
+    <a href="{% url 'alunos:matriculas_list' %}">Limpar</a>
+  </div>
+</form>
+
+<table>
+  <thead>
+    <tr>
+      <th>Aluno</th>
+      <th>CPF</th>
+      <th>Curso</th>
+      <th>Turma</th>
+      <th>Ano/Sem</th>
+      <th>Status</th>
+      <th>Criado em</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for m in page_obj %}
+    <tr>
+      <td>{{ m.aluno.nome }}</td>
+      <td>{{ m.aluno.cpf }}</td>
+      <td>{{ m.turma.curso.codigo }}</td>
+      <td>{{ m.turma.codigo }}</td>
+      <td>{{ m.turma.ano }}/{{ m.turma.semestre }}</td>
+      <td>{{ m.get_status_display }}</td>
+      <td>{{ m.criado_em|date:"d/m/Y H:i" }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="7">Nenhum registro encontrado.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div class="pagination" style="max-width:1100px; margin:16px auto;">
+  {% if page_obj.has_previous %}
+    <a href="?{% if q %}q={{ q }}&{% endif %}{% if status_sel %}status={{ status_sel }}&{% endif %}{% if curso_sel %}curso={{ curso_sel }}&{% endif %}{% if ano_sel %}ano={{ ano_sel }}&{% endif %}{% if semestre_sel %}semestre={{ semestre_sel }}&{% endif %}page={{ page_obj.previous_page_number }}">« Anterior</a>
+  {% endif %}
+  <span class="current">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+  {% if page_obj.has_next %}
+    <a href="?{% if q %}q={{ q }}&{% endif %}{% if status_sel %}status={{ status_sel }}&{% endif %}{% if curso_sel %}curso={{ curso_sel }}&{% endif %}{% if ano_sel %}ano={{ ano_sel }}&{% endif %}{% if semestre_sel %}semestre={{ semestre_sel }}&{% endif %}page={{ page_obj.next_page_number }}">Próxima »</a>
+  {% endif %}
+</div>
+
+</body>
+</html>

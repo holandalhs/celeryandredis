@@ -1,0 +1,25 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    container_name: matriculas_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: matriculas
+      POSTGRES_USER: matriculas
+      POSTGRES_PASSWORD: matriculas
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_matriculas:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: matriculas_redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"   #porta anterior "6379:6379" porta atual "6380:6379"
+                      # porta do host 6380 → porta do container 6379
+
+volumes:
+  pgdata_matriculas:
